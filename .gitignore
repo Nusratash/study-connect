@@ -1,0 +1,19 @@
+# Secrets - never commit
+.env
+.env.*
+!.env.example
+!.env.local.example
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.local.example
+
+# Dependencies / build output
+node_modules/
+dist/
+.next/
+
+# Uploads and OS files
+backend/uploads/*
+!backend/uploads/.gitkeep
+.DS_Store
