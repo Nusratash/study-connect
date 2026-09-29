@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { api } from '../../lib/api';
+import { GraduationCap, ArrowLeft, MailCheck } from 'lucide-react';
+import { api, apiError } from '../../lib/api';
 import { isEmail } from '../../lib/validation';
-import FormField, { inputClass } from '../../components/FormField';
+import FormField, { inputClass } from '../../components/ui/FormField';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -14,37 +15,56 @@ export default function ForgotPasswordPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!isEmail(email)) return setError('Enter a valid email address');
+    if (!isEmail(email)) return setError('Enter a valid email address.');
     setError('');
     setLoading(true);
     try {
-      await api.post('/auth/forgot-password', { email }); // AXIOS POST
+      await api.post('/auth/forgot-password', { email }); // Axios: POST /auth/forgot-password
       setSent(true);
-    } catch {
-      setError('Something went wrong. Please try again.');
+    } catch (err) {
+      setError(apiError(err));
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="max-w-md mx-auto mt-16">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-sm border border-slate-100 dark:border-slate-800">
-        <h1 className="text-2xl font-bold mb-1">Reset your password</h1>
-        <p className="text-sm text-slate-500 mb-6">We&apos;ll email you a link to choose a new password.</p>
+    <div className="flex min-h-screen items-center justify-center bg-subtle/40 px-4 py-12">
+      <div className="w-full max-w-sm rounded-lg border border-line bg-surface p-8 shadow-pop">
+        <div className="mb-6 flex items-center gap-2 font-serif text-lg font-semibold text-brand">
+          <GraduationCap className="h-6 w-6" /> EduConnect
+        </div>
+
         {sent ? (
-          <p className="text-sm text-accent-600">If that email is registered, a reset link is on its way. Check your inbox and spam folder.</p>
+          <div className="text-center">
+            <span className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-success-soft text-success">
+              <MailCheck className="h-5 w-5" />
+            </span>
+            <h1 className="font-serif text-lg font-semibold text-ink">Check your inbox</h1>
+            <p className="mt-2 text-[13.5px] text-ink-2">
+              If an account exists for <span className="font-medium text-ink">{email}</span>, a reset link is on its way.
+            </p>
+            <Link href="/" className="btn-secondary mt-6 inline-flex">
+              <ArrowLeft className="h-4 w-4" /> Back to sign in
+            </Link>
+          </div>
         ) : (
-          <form onSubmit={handleSubmit} noValidate className="space-y-4">
-            <FormField label="Email address" error={error}>
-              <input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
-            </FormField>
-            <button type="submit" disabled={loading} className="w-full py-3 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700 disabled:opacity-60">
-              {loading ? 'Sending…' : 'Send reset link'}
-            </button>
-          </form>
+          <>
+            <h1 className="font-serif text-lg font-semibold text-ink">Forgot your password?</h1>
+            <p className="mt-1.5 text-[13.5px] text-ink-2">Enter your email and we&apos;ll send you a reset link.</p>
+            <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-4">
+              <FormField label="Email address" error={error}>
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass(!!error)} autoFocus />
+              </FormField>
+              <button type="submit" disabled={loading} className="btn-primary btn-lg w-full">
+                {loading ? 'Sending…' : 'Send reset link'}
+              </button>
+            </form>
+            <Link href="/" className="mt-6 flex items-center justify-center gap-1.5 text-[13px] font-medium text-ink-2 hover:text-ink">
+              <ArrowLeft className="h-3.5 w-3.5" /> Back to sign in
+            </Link>
+          </>
         )}
-        <Link href="/" className="block text-sm text-brand-600 mt-6 hover:underline">Back to sign in</Link>
       </div>
     </div>
   );

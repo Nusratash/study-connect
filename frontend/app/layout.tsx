@@ -1,22 +1,38 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import Navbar from '../components/Navbar';
+import { AuthProvider } from '../lib/auth';
+import { ThemeProvider } from '../lib/theme';
+import { ToastProvider } from '../lib/toast';
+import AppShell from '../components/layout/AppShell';
 
 export const metadata: Metadata = {
   title: 'EduConnect — Learn. Mentor. Grow.',
-  description: 'Student-Expert Connectivity Platform',
+  description: 'A student–expert mentorship platform: shared course materials, community Q&A, and 1:1 mentorship.',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+// Avoids a light-mode flash before ThemeProvider reads localStorage on mount.
+const noFlashScript = `
+try {
+  var t = localStorage.getItem('ec.theme');
+  var dark = t ? t === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  if (dark) document.documentElement.classList.add('dark');
+} catch (e) {}
+`;
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: noFlashScript }} />
+      </head>
       <body>
-        <Navbar />
-        <main className="max-w-6xl mx-auto px-4 py-8">{children}</main>
+        <ThemeProvider>
+          <AuthProvider>
+            <ToastProvider>
+              <AppShell>{children}</AppShell>
+            </ToastProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

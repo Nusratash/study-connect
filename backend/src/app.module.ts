@@ -36,7 +36,7 @@ import { BookmarksModule } from './bookmarks/bookmarks.module';
         port: parseInt(config.get<string>('DB_PORT', '5432'), 10),
         username: config.get<string>('DB_USERNAME', 'postgres'),
         password: String(config.get<string>('DB_PASSWORD', 'root')),
-        database: config.get<string>('DB_NAME', 'educonnect'),
+        database: config.get<string>('DB_NAME', 'educonnect1'),
         autoLoadEntities: true,
         synchronize: config.get<string>('NODE_ENV') !== 'production',
         retryAttempts: 3, 

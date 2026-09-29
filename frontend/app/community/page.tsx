@@ -1,14 +1,11 @@
-import { serverApi } from '../../lib/server-api';
-import CommunityClient from '../../components/CommunityClient';
+import { safeGet } from '../../lib/server-api';
+import CommunityBoard from '../../components/community/CommunityBoard';
+import type { Post } from '../../lib/types';
 
 export const dynamic = 'force-dynamic';
 
 // SSR: posts list rendered on the server.
 export default async function CommunityPage() {
-  let posts: any[] = [];
-  try {
-    const { data } = await serverApi.get('/posts'); // AXIOS GET (SSR)
-    posts = data;
-  } catch {}
-  return <CommunityClient initialPosts={posts} />;
+  const { data, failed } = await safeGet<Post[]>('/posts'); // Axios: GET /posts (SSR)
+  return <CommunityBoard initialPosts={data || []} initialFailed={failed} />;
 }

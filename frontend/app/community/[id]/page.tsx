@@ -1,17 +1,12 @@
 import { notFound } from 'next/navigation';
-import { serverApi } from '../../../lib/server-api';
-import PostDetailClient from '../../../components/PostDetailClient';
+import { safeGet } from '../../../lib/server-api';
+import PostDetailClient from '../../../components/community/PostDetailClient';
+import type { Post } from '../../../lib/types';
 
 export const dynamic = 'force-dynamic';
 
-// Dynamic route + SSR. Unknown/invalid ids fall through to not-found.tsx
-export default async function PostDetailPage({ params }: { params: { id: string } }) {
-  let post: any;
-  try {
-    const { data } = await serverApi.get(`/posts/${params.id}`); // AXIOS GET (SSR)
-    post = data;
-  } catch {
-    notFound();
-  }
-  return <PostDetailClient initialPost={post} />;
+export default async function PostPage({ params }: { params: { id: string } }) {
+  const { data, failed } = await safeGet<Post>(`/posts/${params.id}`); // Axios: GET /posts/:id (SSR)
+  if (failed || !data) notFound();
+  return <PostDetailClient initialPost={data} />;
 }

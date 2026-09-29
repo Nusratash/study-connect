@@ -2,12 +2,14 @@
 
 import { Suspense, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-import { GraduationCap } from 'lucide-react';
-import { api } from '../../lib/api';
-import FormField, { inputClass } from '../../components/FormField';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { GraduationCap, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { api, apiError } from '../../lib/api';
+import { passwordRules } from '../../lib/validation';
+import FormField, { inputClass } from '../../components/ui/FormField';
 
-function ResetForm() {
+function ResetPasswordForm() {
+  const router = useRouter();
   const token = useSearchParams().get('token') || '';
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -17,66 +19,66 @@ function ResetForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!token) return setError('This reset link is invalid.');
-    if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password))
-      return setError('Password must be at least 8 characters with letters and numbers');
-    if (password !== confirm) return setError('Passwords do not match');
-
-    setLoading(true);
+    if (!token) return setError('This reset link is invalid or missing a token.');
+    if (passwordRules.some((r) => !r.test(password))) return setError('Password does not meet the requirements.');
+    if (password !== confirm) return setError('Passwords do not match.');
     setError('');
+    setLoading(true);
     try {
-      await api.post('/auth/reset-password', { token, newPassword: password }); // AXIOS POST
+      await api.post('/auth/reset-password', { token, newPassword: password }); // Axios: POST /auth/reset-password
       setDone(true);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message;
-      setError(Array.isArray(msg) ? msg.join(', ') : msg || 'Could not reset password');
+      setTimeout(() => router.push('/'), 2200);
+    } catch (err) {
+      setError(apiError(err, 'This reset link is invalid or has expired.'));
     } finally {
       setLoading(false);
     }
   }
 
-  if (done) {
-    return (
-      <div className="text-center">
-        <div className="text-4xl mb-3">✅</div>
-        <h1 className="text-xl font-bold">Password updated</h1>
-        <p className="text-sm text-slate-500 mt-2">You can now sign in with your new password.</p>
-        <Link href="/" className="inline-block mt-5 px-5 py-2.5 rounded-xl bg-brand-600 text-white font-medium">Go to sign in</Link>
-      </div>
-    );
-  }
-
   return (
-    <>
-      <h1 className="text-2xl font-bold">Choose a new password</h1>
-      <p className="text-sm text-slate-500 mt-1 mb-6">Enter a new password for your account.</p>
-      {error && <div role="alert" className="mb-4 text-sm text-red-700 bg-red-50 border border-red-100 rounded-xl px-4 py-3">{error}</div>}
-      <form onSubmit={handleSubmit} noValidate className="space-y-4">
-        <FormField label="New password">
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} />
-        </FormField>
-        <FormField label="Confirm password">
-          <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={inputClass} />
-        </FormField>
-        <button type="submit" disabled={loading} className="w-full py-3 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700 disabled:opacity-60">
-          {loading ? 'Saving…' : 'Reset password'}
-        </button>
-      </form>
-    </>
+    <div className="flex min-h-screen items-center justify-center bg-subtle/40 px-4 py-12">
+      <div className="w-full max-w-sm rounded-lg border border-line bg-surface p-8 shadow-pop">
+        <div className="mb-6 flex items-center gap-2 font-serif text-lg font-semibold text-brand">
+          <GraduationCap className="h-6 w-6" /> EduConnect
+        </div>
+        {done ? (
+          <div className="text-center">
+            <span className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-success-soft text-success">
+              <ShieldCheck className="h-5 w-5" />
+            </span>
+            <h1 className="font-serif text-lg font-semibold text-ink">Password updated</h1>
+            <p className="mt-2 text-[13.5px] text-ink-2">Redirecting you to sign in…</p>
+          </div>
+        ) : (
+          <>
+            <h1 className="font-serif text-lg font-semibold text-ink">Set a new password</h1>
+            <p className="mt-1.5 text-[13.5px] text-ink-2">Choose a strong password for your account.</p>
+            {error && <div role="alert" className="mt-4 rounded-md border border-danger/25 bg-danger-soft px-4 py-2.5 text-[13px] text-danger">{error}</div>}
+            <form onSubmit={handleSubmit} noValidate className="mt-5 space-y-4">
+              <FormField label="New password">
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass()} autoFocus />
+              </FormField>
+              <FormField label="Confirm password">
+                <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={inputClass()} />
+              </FormField>
+              <button type="submit" disabled={loading} className="btn-primary btn-lg w-full">
+                {loading ? 'Updating…' : 'Update password'}
+              </button>
+            </form>
+          </>
+        )}
+        <Link href="/" className="mt-6 flex items-center justify-center gap-1.5 text-[13px] font-medium text-ink-2 hover:text-ink">
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to sign in
+        </Link>
+      </div>
+    </div>
   );
 }
 
 export default function ResetPasswordPage() {
   return (
-    <div className="fixed inset-0 z-40 overflow-auto bg-gradient-to-br from-brand-50 via-white to-emerald-50 dark:from-slate-950 dark:to-slate-900 flex items-center justify-center p-6">
-      <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800 p-8">
-        <div className="flex items-center gap-2 text-xl font-bold text-brand-600 mb-6">
-          <GraduationCap className="w-7 h-7" /> EduConnect
-        </div>
-        <Suspense fallback={<div className="skeleton h-40" />}>
-          <ResetForm />
-        </Suspense>
-      </div>
-    </div>
+    <Suspense fallback={null}>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

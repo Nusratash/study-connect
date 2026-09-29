@@ -6,10 +6,11 @@ import { User } from '../database/entities/user.entity';
 import { ExpertProfile } from '../database/entities/expert-profile.entity';
 import { Post } from '../database/entities/post.entity';
 import { CourseMaterial } from '../database/entities/course-material.entity';
+import { MentorshipRequest } from '../database/entities/mentorship-request.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, ExpertProfile, Post, CourseMaterial]),
+    TypeOrmModule.forFeature([User, ExpertProfile, Post, CourseMaterial, MentorshipRequest]),
   ],
   providers: [AdminService],
   controllers: [AdminController],

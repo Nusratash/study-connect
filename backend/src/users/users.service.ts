@@ -1,11 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
 import { User } from '../database/entities/user.entity';
 import { StudentProfile } from '../database/entities/student-profile.entity';
 import { ExpertProfile } from '../database/entities/expert-profile.entity';
 import { Role } from '../common/enums/role.enum';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Injectable()
 export class UsersService {
@@ -61,6 +63,21 @@ export class UsersService {
     }
 
     return this.findById(userId);
+  }
+
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const user = await this.usersRepo
+      .createQueryBuilder('user')
+      .addSelect('user.passwordHash')
+      .where('user.id = :userId', { userId })
+      .getOne();
+    if (!user || !(await bcrypt.compare(dto.currentPassword, user.passwordHash))) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+    await this.usersRepo.update(userId, {
+      passwordHash: await bcrypt.hash(dto.newPassword, 10),
+    });
+    return { message: 'Password updated' };
   }
 
   async listExperts(search?: string) {

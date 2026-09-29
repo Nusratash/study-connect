@@ -1,9 +1,15 @@
+import { Skeleton, SkeletonCard } from '../../components/ui/Skeleton';
+
 export default function Loading() {
   return (
-    <div className="space-y-4">
-      <div className="skeleton h-8 w-1/3" />
-      <div className="grid md:grid-cols-3 gap-4">
-        {[1, 2, 3].map((i) => <div key={i} className="skeleton h-40" />)}
+    <div>
+      <div className="mb-8 flex items-center justify-between">
+        <Skeleton className="h-8 w-56" />
+        <Skeleton className="h-9 w-28" />
+      </div>
+      <Skeleton className="mb-6 h-10 w-full max-w-xs" />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {[1, 2, 3, 4, 5, 6].map((i) => <SkeletonCard key={i} />)}
       </div>
     </div>
   );

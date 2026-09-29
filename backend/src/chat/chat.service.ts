@@ -16,11 +16,50 @@ export class ChatService {
   ) {}
 
   async findConversationsForUser(userId: string) {
-    return this.conversationsRepo.find({
+    const conversations = await this.conversationsRepo.find({
       where: [{ userOneId: userId }, { userTwoId: userId }],
       relations: ['userOne', 'userTwo'],
       order: { createdAt: 'DESC' },
     });
+
+    // Shape each conversation for the current viewer: who the *other* person is,
+    // the last message for a preview, and how many are unread.
+    const summaries = await Promise.all(
+      conversations.map(async (c) => {
+        const otherUser = c.userOneId === userId ? c.userTwo : c.userOne;
+        const [lastMessage] = await this.messagesRepo.find({
+          where: { conversationId: c.id },
+          order: { createdAt: 'DESC' },
+          take: 1,
+        });
+        const unreadCount = await this.messagesRepo.count({
+          where: { conversationId: c.id, isRead: false, senderId: otherUser.id },
+        });
+        return {
+          id: c.id,
+          createdAt: c.createdAt,
+          otherUser,
+          lastMessage: lastMessage || null,
+          unreadCount,
+        };
+      }),
+    );
+
+    return summaries.sort((a, b) => {
+      const at = a.lastMessage?.createdAt ?? a.createdAt;
+      const bt = b.lastMessage?.createdAt ?? b.createdAt;
+      return new Date(bt).getTime() - new Date(at).getTime();
+    });
+  }
+
+  async getConversationMeta(conversationId: string, userId: string) {
+    const conversation = await this.assertParticipant(conversationId, userId);
+    const conv = await this.conversationsRepo.findOne({
+      where: { id: conversation.id },
+      relations: ['userOne', 'userTwo'],
+    });
+    const otherUser = conv.userOneId === userId ? conv.userTwo : conv.userOne;
+    return { id: conv.id, otherUser };
   }
 
   async getOrCreateConversation(userOneId: string, userTwoId: string) {

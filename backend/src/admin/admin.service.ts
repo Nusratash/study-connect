@@ -5,6 +5,7 @@ import { User } from '../database/entities/user.entity';
 import { ExpertProfile } from '../database/entities/expert-profile.entity';
 import { Post } from '../database/entities/post.entity';
 import { CourseMaterial } from '../database/entities/course-material.entity';
+import { MentorshipRequest } from '../database/entities/mentorship-request.entity';
 import { Role } from '../common/enums/role.enum';
 
 @Injectable()
@@ -16,10 +17,15 @@ export class AdminService {
     @InjectRepository(Post) private postsRepo: Repository<Post>,
     @InjectRepository(CourseMaterial)
     private materialsRepo: Repository<CourseMaterial>,
+    @InjectRepository(MentorshipRequest)
+    private mentorshipRepo: Repository<MentorshipRequest>,
   ) {}
 
   async listUsers() {
-    return this.usersRepo.find({ order: { createdAt: 'DESC' } });
+    return this.usersRepo.find({
+      order: { createdAt: 'DESC' },
+      relations: ['expertProfile'],
+    });
   }
 
   async approveExpert(userId: string) {
@@ -45,23 +51,35 @@ export class AdminService {
   }
 
   async analytics() {
-    const [totalUsers, totalStudents, totalExperts, totalPosts, resolvedPosts, totalMaterials] =
-      await Promise.all([
-        this.usersRepo.count(),
-        this.usersRepo.count({ where: { role: Role.STUDENT } }),
-        this.usersRepo.count({ where: { role: Role.EXPERT } }),
-        this.postsRepo.count(),
-        this.postsRepo.count({ where: { status: 'resolved' as any } }),
-        this.materialsRepo.count(),
-      ]);
+    const [
+      totalUsers,
+      totalStudents,
+      totalExperts,
+      pendingExperts,
+      totalPosts,
+      resolvedPosts,
+      totalMaterials,
+      totalMentorships,
+    ] = await Promise.all([
+      this.usersRepo.count(),
+      this.usersRepo.count({ where: { role: Role.STUDENT } }),
+      this.usersRepo.count({ where: { role: Role.EXPERT } }),
+      this.expertProfileRepo.count({ where: { isApproved: false } }),
+      this.postsRepo.count(),
+      this.postsRepo.count({ where: { status: 'resolved' as any } }),
+      this.materialsRepo.count(),
+      this.mentorshipRepo.count(),
+    ]);
 
     return {
       totalUsers,
       totalStudents,
       totalExperts,
+      pendingExperts,
       totalPosts,
       resolvedPosts,
       totalMaterials,
+      totalMentorships,
     };
   }
 }

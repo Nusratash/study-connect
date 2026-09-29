@@ -3,11 +3,13 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
+  OneToMany,
   JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from './user.entity';
+import { Comment } from './comment.entity';
 import { PostStatus } from '../../common/enums/post-status.enum';
 
 @Entity('posts')
@@ -39,6 +41,12 @@ export class Post {
 
   @Column({ nullable: true })
   acceptedCommentId: string;
+
+  @OneToMany(() => Comment, (comment) => comment.post)
+  comments: Comment[];
+
+  // Not a DB column: populated per-request via loadRelationCountAndMap.
+  commentCount?: number;
 
   @CreateDateColumn()
   createdAt: Date;

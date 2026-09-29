@@ -1,33 +1,31 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getStoredUser } from '../lib/api';
+import { useAuth, homePath } from '../lib/auth';
+import type { Role } from '../lib/types';
+import { Skeleton } from './ui/Skeleton';
 
-// Client-side route guard: redirects to the login page when not authenticated,
-// and (optionally) when the user's role is not allowed.
-export default function RequireAuth({
-  children,
-  roles,
-}: {
-  children: React.ReactNode;
-  roles?: string[];
-}) {
+export default function RequireAuth({ children, roles }: { children: React.ReactNode; roles?: Role[] }) {
+  const { user, status } = useAuth();
   const router = useRouter();
-  const [ok, setOk] = useState(false);
 
   useEffect(() => {
-    const user = getStoredUser();
-    const token = localStorage.getItem('accessToken');
-    if (!user || !token) {
-      router.replace('/');
-    } else if (roles && !roles.includes(user.role)) {
-      router.replace(user.role === 'expert' ? '/dashboard/expert' : user.role === 'admin' ? '/admin' : '/dashboard/student');
-    } else {
-      setOk(true);
-    }
-  }, []);
+    if (status === 'anon') router.replace('/');
+    else if (status === 'authed' && roles && user && !roles.includes(user.role)) router.replace(homePath(user.role));
+  }, [status, user, roles, router]);
 
-  if (!ok) return <div className="skeleton h-64" />;
+  if (status !== 'authed' || (roles && user && !roles.includes(user.role))) {
+    return (
+      <div className="mx-auto max-w-6xl space-y-4 px-4 py-10">
+        <Skeleton className="h-8 w-1/4" />
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+        </div>
+      </div>
+    );
+  }
   return <>{children}</>;
 }

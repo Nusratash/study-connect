@@ -2,102 +2,104 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { api, getStoredUser } from '../../../lib/api';
-import DashboardSidebar from '../../../components/DashboardSidebar';
-import SavedMaterials from '../../../components/SavedMaterials';
+import { BookOpen, Compass, Inbox, MessagesSquare } from 'lucide-react';
+import { api } from '../../../lib/api';
+import { useAuth } from '../../../lib/auth';
+import type { ConversationSummary, MentorshipRequest, User } from '../../../lib/types';
+import ExpertCard from '../../../components/experts/ExpertCard';
+import RequestRow from '../../../components/dashboard/RequestRow';
+import SavedMaterials from '../../../components/dashboard/SavedMaterials';
+import StatCard from '../../../components/ui/StatCard';
+import PageHeader from '../../../components/ui/PageHeader';
+import EmptyState from '../../../components/ui/EmptyState';
+import Avatar from '../../../components/ui/Avatar';
+import { chatTime } from '../../../lib/format';
+import { SkeletonCard } from '../../../components/ui/Skeleton';
 
 export default function StudentDashboard() {
-  const [experts, setExperts] = useState<any[]>([]);
-  const [requests, setRequests] = useState<any[]>([]);
-  const [conversations, setConversations] = useState<any[]>([]);
+  const { user } = useAuth();
+  const [experts, setExperts] = useState<User[]>([]);
+  const [requests, setRequests] = useState<MentorshipRequest[]>([]);
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const me = getStoredUser();
 
   useEffect(() => {
     Promise.all([
-      api.get('/users/experts'),
-      api.get('/mentorship/my-requests'),
-      api.get('/chat/conversations'),
+      api.get<User[]>('/users/experts'), // Axios: GET /users/experts
+      api.get<MentorshipRequest[]>('/mentorship/my-requests'), // Axios: GET /mentorship/my-requests
+      api.get<ConversationSummary[]>('/chat/conversations'), // Axios: GET /chat/conversations
     ])
-      .then(([e, r, c]) => {
-        setExperts(e.data);
-        setRequests(r.data);
-        setConversations(c.data);
-      })
+      .then(([e, r, c]) => { setExperts(e.data); setRequests(r.data); setConversations(c.data); })
       .finally(() => setLoading(false));
   }, []);
 
+  const active = requests.filter((r) => r.status === 'accepted').length;
+  const pending = requests.filter((r) => r.status === 'pending').length;
+
   return (
-    <div className="flex flex-col md:flex-row gap-6">
-      <DashboardSidebar role="student" />
-      <div className="flex-1 space-y-8">
-        <div>
-          <h1 className="text-2xl font-bold">Student Dashboard</h1>
-          <p className="text-sm text-slate-500">Find mentors, track requests, and chat with experts</p>
+    <div className="space-y-10">
+      <PageHeader eyebrow="Dashboard" title={`Welcome back, ${user?.name?.split(' ')[0] || 'there'}`} description="Find mentors, track requests, and keep learning." />
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatCard icon={Compass} label="Active mentors" value={active} tone="brand" />
+        <StatCard icon={Inbox} label="Pending requests" value={pending} tone="accent" />
+        <StatCard icon={MessagesSquare} label="Conversations" value={conversations.length} tone="success" />
+      </div>
+
+      <section>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-serif text-[16px] font-semibold text-ink">Featured experts</h2>
+          <Link href="/experts" className="text-[12.5px] font-medium text-brand hover:underline">View all</Link>
         </div>
-
-        <section>
-          <h2 className="font-semibold mb-3">Featured Experts</h2>
-          {loading ? (
-            <div className="grid md:grid-cols-3 gap-4">{[1, 2, 3].map((i) => <div key={i} className="skeleton h-32" />)}</div>
-          ) : (
-            <div className="grid md:grid-cols-3 gap-4">
-              {experts.slice(0, 6).map((ex) => (
-                <Link
-                  key={ex.id}
-                  href={`/experts/${ex.id}`}
-                  className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 hover:shadow-md"
-                >
-                  <div className="font-semibold">{ex.name}</div>
-                  <div className="text-xs text-slate-400 mt-1">
-                    {(ex.expertProfile?.expertise || []).slice(0, 3).join(', ')}
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section id="requests">
-          <h2 className="font-semibold mb-3">My Mentorship Requests</h2>
-          <div className="space-y-2">
-            {requests.length === 0 && <p className="text-sm text-slate-500">No requests yet.</p>}
-            {requests.map((r) => (
-              <div key={r.id} className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                <div>
-                  <div className="font-medium text-sm">{r.expert?.name}</div>
-                  <div className="text-xs text-slate-400">{r.message}</div>
-                </div>
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${
-                  r.status === 'accepted' ? 'bg-accent-500/10 text-accent-600' :
-                  r.status === 'rejected' ? 'bg-red-500/10 text-red-600' :
-                  'bg-amber-500/10 text-amber-600'
-                }`}>
-                  {r.status}
-                </span>
-              </div>
-            ))}
+        {loading ? (
+          <div className="grid gap-4 sm:grid-cols-3">{[1, 2, 3].map((i) => <SkeletonCard key={i} />)}</div>
+        ) : experts.length === 0 ? (
+          <EmptyState icon={Compass} title="No experts available yet" />
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-3">
+            {experts.slice(0, 6).map((ex) => <ExpertCard key={ex.id} expert={ex} />)}
           </div>
-        </section>
+        )}
+      </section>
 
-        <SavedMaterials />
-
-        <section>
-          <h2 className="font-semibold mb-3">Conversations</h2>
+      <section>
+        <h2 className="mb-3 font-serif text-[16px] font-semibold text-ink">My mentorship requests</h2>
+        {requests.length === 0 ? (
+          <EmptyState icon={Inbox} title="No requests yet" description="Visit a mentor's profile to send your first request." action={<Link href="/experts" className="btn-secondary btn-sm">Find an expert</Link>} />
+        ) : (
           <div className="space-y-2">
-            {conversations.length === 0 && <p className="text-sm text-slate-500">No conversations yet. Get mentorship accepted to start chatting.</p>}
-            {conversations.map((c) => (
-              <Link
-                key={c.id}
-                href={`/chat/${c.id}`}
-                className="block bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-100 dark:border-slate-800 hover:shadow-md"
-              >
-                Chat with {c.userOneId === me?.id ? c.userTwo?.name : c.userOne?.name}
+            {requests.map((r) => <RequestRow key={r.id} request={r} person={r.expert} />)}
+          </div>
+        )}
+      </section>
+
+      <section>
+        <h2 className="mb-3 font-serif text-[16px] font-semibold text-ink">Saved materials</h2>
+        <SavedMaterials />
+      </section>
+
+      <section>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-serif text-[16px] font-semibold text-ink">Conversations</h2>
+          <Link href="/chat" className="text-[12.5px] font-medium text-brand hover:underline">Open inbox</Link>
+        </div>
+        {conversations.length === 0 ? (
+          <EmptyState icon={MessagesSquare} title="No conversations yet" description="Chats start automatically once mentorship is accepted." />
+        ) : (
+          <div className="space-y-2">
+            {conversations.slice(0, 4).map((c) => (
+              <Link key={c.id} href={`/chat/${c.id}`} className="card card-hover flex items-center gap-3 p-3.5">
+                <Avatar name={c.otherUser?.name} size="sm" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13.5px] font-medium text-ink">{c.otherUser?.name}</p>
+                  <p className="truncate text-[12px] text-ink-2">{c.lastMessage?.content || 'Say hello 👋'}</p>
+                </div>
+                {c.lastMessage && <span className="shrink-0 text-[11px] text-ink-3">{chatTime(c.lastMessage.createdAt)}</span>}
               </Link>
             ))}
           </div>
-        </section>
-      </div>
+        )}
+      </section>
     </div>
   );
 }

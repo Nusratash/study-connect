@@ -3,35 +3,30 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { GraduationCap, BookOpen, Users, MessageSquare, Eye, EyeOff } from 'lucide-react';
-import { api, storeAuth, getStoredUser } from '../lib/api';
+import { GraduationCap, BookOpen, Users, MessagesSquare, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { api, apiError } from '../lib/api';
+import { useAuth, homePath } from '../lib/auth';
 import { validateLogin, Errors } from '../lib/validation';
-import FormField, { inputClass } from '../components/FormField';
+import FormField, { inputClass } from '../components/ui/FormField';
 
-const features = [
-  { icon: BookOpen, title: 'Shared course materials', text: 'Upload, search and save study resources.' },
-  { icon: Users, title: 'Verified expert mentors', text: 'Request mentorship from approved experts.' },
-  { icon: MessageSquare, title: 'Community Q&A', text: 'Ask for help and mark accepted answers.' },
+const FEATURES = [
+  { icon: BookOpen, title: 'Shared course materials', text: 'Upload, search and save study resources by category.' },
+  { icon: Users, title: 'Verified expert mentors', text: 'Request 1:1 mentorship from approved subject experts.' },
+  { icon: MessagesSquare, title: 'Community Q&A', text: 'Ask questions, get answers, and mark the one that solved it.' },
 ];
 
-function homeFor(role: string) {
-  return role === 'expert' ? '/dashboard/expert' : role === 'admin' ? '/admin' : '/dashboard/student';
-}
-
-// The login page is the landing page ("/") of the site.
 export default function LoginPage() {
   const router = useRouter();
+  const { user, status, signIn } = useAuth();
   const [form, setForm] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState<Errors>({});
   const [serverError, setServerError] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Already logged in? Go straight to the dashboard.
   useEffect(() => {
-    const u = getStoredUser();
-    if (u && localStorage.getItem('accessToken')) router.replace(homeFor(u.role));
-  }, []);
+    if (status === 'authed' && user) router.replace(homePath(user.role));
+  }, [status, user, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -42,114 +37,124 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      const { data } = await api.post('/auth/login', form); // AXIOS POST
-      storeAuth(data.user, data.accessToken, data.refreshToken);
-      router.push(homeFor(data.user.role));
-    } catch (err: any) {
-      setServerError(err?.response?.data?.message || 'Unable to log in. Please try again.');
+      const { data } = await api.post('/auth/login', form); // Axios: POST /auth/login
+      signIn(data.user, data.accessToken, data.refreshToken);
+      router.push(homePath(data.user.role));
+    } catch (err) {
+      setServerError(apiError(err, 'Unable to log in. Check your details and try again.'));
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex bg-white dark:bg-slate-950 overflow-auto">
+    <div className="grid min-h-screen lg:grid-cols-2">
       {/* Brand panel */}
-      <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-brand-700 via-brand-600 to-indigo-500 text-white p-14 flex-col justify-between">
-        <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_20%_20%,white,transparent_40%),radial-gradient(circle_at_80%_80%,#10b981,transparent_40%)]" />
-        <div className="relative flex items-center gap-2 text-xl font-bold">
-          <GraduationCap className="w-8 h-8" /> EduConnect
+      <div className="relative hidden flex-col justify-between overflow-hidden bg-brand p-12 text-on-brand lg:flex xl:p-16">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.07]"
+          style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)', backgroundSize: '28px 28px' }}
+        />
+        <div className="relative flex items-center gap-2.5 text-lg font-semibold">
+          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-on-brand/15">
+            <GraduationCap className="h-4.5 w-4.5" />
+          </span>
+          EduConnect
         </div>
-        <div className="relative">
-          <h1 className="text-4xl font-bold leading-tight">
-            Where students meet <br /> the experts who guide them.
+        <div className="relative max-w-md">
+          <h1 className="font-serif text-[2.6rem] font-semibold leading-[1.15] tracking-tight">
+            Where students meet the experts who guide them.
           </h1>
-          <p className="mt-4 text-indigo-100 max-w-md">
-            A learning platform for sharing knowledge, getting answers and finding the right mentor.
+          <p className="mt-4 text-[15px] text-on-brand/75">
+            A focused learning platform for sharing knowledge, getting real answers, and finding the right mentor.
           </p>
           <ul className="mt-10 space-y-5">
-            {features.map((f) => (
-              <li key={f.title} className="flex items-start gap-4">
-                <span className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
-                  <f.icon className="w-5 h-5" />
+            {FEATURES.map((f) => (
+              <li key={f.title} className="flex items-start gap-3.5">
+                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-on-brand/10">
+                  <f.icon className="h-4.5 w-4.5" />
                 </span>
                 <div>
-                  <p className="font-semibold">{f.title}</p>
-                  <p className="text-sm text-indigo-100">{f.text}</p>
+                  <p className="text-[14.5px] font-semibold">{f.title}</p>
+                  <p className="text-[13.5px] text-on-brand/70">{f.text}</p>
                 </div>
               </li>
             ))}
           </ul>
         </div>
-        <p className="relative text-xs text-indigo-200">© {new Date().getFullYear()} EduConnect</p>
+        <p className="relative text-xs text-on-brand/50">© {new Date().getFullYear()} EduConnect. Built for learners and mentors.</p>
       </div>
 
       {/* Form panel */}
-      <div className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-md">
-          <div className="lg:hidden flex items-center gap-2 text-xl font-bold text-brand-600 mb-8">
-            <GraduationCap className="w-7 h-7" /> EduConnect
+      <div className="flex items-center justify-center bg-bg px-6 py-12">
+        <div className="w-full max-w-[26rem]">
+          <div className="mb-9 flex items-center gap-2 font-serif text-lg font-semibold text-brand lg:hidden">
+            <GraduationCap className="h-6 w-6" /> EduConnect
           </div>
-          <h2 className="text-3xl font-bold text-slate-900 dark:text-white">Welcome back</h2>
-          <p className="text-slate-500 mt-1 mb-8">Sign in to continue to your dashboard.</p>
+          <h2 className="font-serif text-[26px] font-semibold text-ink">Welcome back</h2>
+          <p className="mt-1.5 text-[15px] text-ink-2">Sign in to continue to your dashboard.</p>
 
           {serverError && (
-            <div role="alert" className="mb-5 text-sm text-red-700 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+            <div role="alert" className="mt-6 rounded-md border border-danger/25 bg-danger-soft px-4 py-3 text-[13.5px] text-danger">
               {serverError}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} noValidate className="space-y-5">
-            <FormField label="Email address" error={errors.email}>
+          <form onSubmit={handleSubmit} noValidate className="mt-7 space-y-4">
+            <FormField label="Email address" htmlFor="email" error={errors.email}>
               <input
+                id="email"
                 type="email"
                 autoComplete="email"
                 placeholder="you@example.com"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className={inputClass}
+                className={inputClass(!!errors.email)}
               />
             </FormField>
-            <FormField label="Password" error={errors.password}>
+            <FormField label="Password" htmlFor="password" error={errors.password}>
               <div className="relative">
                 <input
+                  id="password"
                   type={showPw ? 'text' : 'password'}
                   autoComplete="current-password"
                   placeholder="••••••••"
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  className={inputClass + ' pr-11'}
+                  className={inputClass(!!errors.password) + ' pr-10'}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPw((s) => !s)}
                   aria-label={showPw ? 'Hide password' : 'Show password'}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink-2"
                 >
-                  {showPw ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </FormField>
-            <div className="text-right -mt-2">
-              <Link href="/forgot-password" className="text-sm text-brand-600 hover:underline">
+            <div className="-mt-1 text-right">
+              <Link href="/forgot-password" className="text-[13px] font-medium text-brand hover:underline">
                 Forgot password?
               </Link>
             </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 rounded-xl bg-brand-600 text-white font-semibold shadow-sm hover:bg-brand-700 disabled:opacity-60 transition"
-            >
+            <button type="submit" disabled={loading} className="btn-primary btn-lg w-full">
               {loading ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
 
-          <p className="text-sm text-center mt-8 text-slate-500">
+          <p className="mt-8 text-center text-[13.5px] text-ink-2">
             New to EduConnect?{' '}
-            <Link href="/register" className="text-brand-600 font-semibold hover:underline">
-              Create an account
+            <Link href="/register" className="inline-flex items-center gap-0.5 font-semibold text-brand hover:underline">
+              Create an account <ArrowRight className="h-3 w-3" />
             </Link>
           </p>
+
+          <div className="mt-8 rounded-lg border border-line bg-subtle/60 px-4 py-3 text-[12.5px] text-ink-2">
+            <p className="mb-1 font-medium text-ink-2">Demo accounts</p>
+            <p>admin@educonnect.dev · expert@educonnect.dev · student@educonnect.dev</p>
+            <p className="text-ink-3">Password123!</p>
+          </div>
         </div>
       </div>
     </div>

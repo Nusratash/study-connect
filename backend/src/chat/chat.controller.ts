@@ -22,6 +22,14 @@ export class ChatController {
     return this.chatService.findConversationsForUser(userId);
   }
 
+  @Get('conversations/:conversationId')
+  conversationMeta(
+    @Param('conversationId', ParseUUIDPipe) conversationId: string,
+    @CurrentUser('userId') userId: string,
+  ) {
+    return this.chatService.getConversationMeta(conversationId, userId);
+  }
+
   @Post('conversations/:otherUserId')
   startConversation(
     @CurrentUser('userId') userId: string,

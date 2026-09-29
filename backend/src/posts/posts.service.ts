@@ -40,6 +40,7 @@ export class PostsService {
     const qb = this.postsRepo
       .createQueryBuilder('post')
       .leftJoinAndSelect('post.author', 'author')
+      .loadRelationCountAndMap('post.commentCount', 'post.comments')
       .orderBy('post.createdAt', 'DESC');
 
     if (tag) qb.andWhere(':tag = ANY(post.tags)', { tag });
